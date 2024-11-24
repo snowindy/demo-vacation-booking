@@ -1,13 +1,15 @@
 package com.example.demo.repository;
 
 import com.example.demo.model.Employee;
-import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.RowMapper;
 
 import java.util.Optional;
+import java.lang.reflect.Field;
 
 @Repository
 public class EmployeeRepository {
@@ -16,18 +18,7 @@ public class EmployeeRepository {
 
     public EmployeeRepository(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        this.rowMapper = (rs, rowNum) -> Employee.builder()
-                .id(rs.getLong("id"))
-                .email(rs.getString("email"))
-                .firstName(rs.getString("first_name"))
-                .lastName(rs.getString("last_name"))
-                .role(rs.getString("role"))
-                .managerId(rs.getObject("manager_id", Long.class))
-                .vacationDaysTotal(rs.getInt("vacation_days_total"))
-                .vacationDaysUsed(rs.getInt("vacation_days_used"))
-                .createdAt(rs.getTimestamp("created_at").toInstant())
-                .updatedAt(rs.getTimestamp("updated_at").toInstant())
-                .build();
+        this.rowMapper = new BeanPropertyRowMapper<>(Employee.class);
     }
 
     public Optional<Employee> findById(Long id) {
@@ -47,39 +38,38 @@ public class EmployeeRepository {
         return update(employee);
     }
 
+    private MapSqlParameterSource createParameterSource(Object object) {
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        try {
+            for (Field field : object.getClass().getDeclaredFields()) {
+                field.setAccessible(true);
+                String paramName = camelToSnakeCase(field.getName());
+                Object value = field.get(object);
+                params.addValue(paramName, value);
+            }
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Error creating parameter source", e);
+        }
+        return params;
+    }
+
+    private String camelToSnakeCase(String str) {
+        return str.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+    }
+
     private Employee insert(Employee employee) {
         String sql = "INSERT INTO employees (email, first_name, last_name, password_hash, role, manager_id, " +
-                "vacation_days_total, vacation_days_used) VALUES (:email, :firstName, :lastName, :passwordHash, " +
-                ":role, :managerId, :vacationDaysTotal, :vacationDaysUsed) RETURNING *";
+                "vacation_days_total, vacation_days_used) VALUES (:email, :first_name, :last_name, :password_hash, " +
+                ":role, :manager_id, :vacation_days_total, :vacation_days_used) RETURNING *";
         
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("email", employee.getEmail())
-                .addValue("firstName", employee.getFirstName())
-                .addValue("lastName", employee.getLastName())
-                .addValue("passwordHash", employee.getPasswordHash())
-                .addValue("role", employee.getRole())
-                .addValue("managerId", employee.getManagerId())
-                .addValue("vacationDaysTotal", employee.getVacationDaysTotal())
-                .addValue("vacationDaysUsed", employee.getVacationDaysUsed());
-
-        return jdbcTemplate.queryForObject(sql, params, rowMapper);
+        return jdbcTemplate.queryForObject(sql, createParameterSource(employee), rowMapper);
     }
 
     private Employee update(Employee employee) {
-        String sql = "UPDATE employees SET email = :email, first_name = :firstName, last_name = :lastName, " +
-                "role = :role, manager_id = :managerId, vacation_days_total = :vacationDaysTotal, " +
-                "vacation_days_used = :vacationDaysUsed WHERE id = :id RETURNING *";
+        String sql = "UPDATE employees SET email = :email, first_name = :first_name, last_name = :last_name, " +
+                "role = :role, manager_id = :manager_id, vacation_days_total = :vacation_days_total, " +
+                "vacation_days_used = :vacation_days_used WHERE id = :id RETURNING *";
 
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("id", employee.getId())
-                .addValue("email", employee.getEmail())
-                .addValue("firstName", employee.getFirstName())
-                .addValue("lastName", employee.getLastName())
-                .addValue("role", employee.getRole())
-                .addValue("managerId", employee.getManagerId())
-                .addValue("vacationDaysTotal", employee.getVacationDaysTotal())
-                .addValue("vacationDaysUsed", employee.getVacationDaysUsed());
-
-        return jdbcTemplate.queryForObject(sql, params, rowMapper);
+        return jdbcTemplate.queryForObject(sql, createParameterSource(employee), rowMapper);
     }
 } 

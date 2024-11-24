@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
+import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.sql.DataSource;
 
@@ -14,15 +15,20 @@ import javax.sql.DataSource;
 @Profile("test")
 public class TestDatabaseConfig {
     
+    @Bean(initMethod = "start", destroyMethod = "stop")
+    public PostgreSQLContainer<?> postgreSQLContainer() {
+        return new PostgreSQLContainer<>("postgres:15-alpine")
+                .withDatabaseName("testdb")
+                .withUsername("test")
+                .withPassword("test");
+    }
+
     @Bean
-    public DataSource dataSource(
-            @Value("${spring.datasource.url}") String url,
-            @Value("${spring.datasource.username}") String username,
-            @Value("${spring.datasource.password}") String password) {
+    public DataSource dataSource(PostgreSQLContainer<?> postgreSQLContainer) {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(url);
-        config.setUsername(username);
-        config.setPassword(password);
+        config.setJdbcUrl(postgreSQLContainer.getJdbcUrl());
+        config.setUsername(postgreSQLContainer.getUsername());
+        config.setPassword(postgreSQLContainer.getPassword());
         config.setMaximumPoolSize(2);
         return new HikariDataSource(config);
     }

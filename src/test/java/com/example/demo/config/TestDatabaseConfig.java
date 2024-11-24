@@ -3,24 +3,36 @@ package com.example.demo.config;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import liquibase.integration.spring.SpringLiquibase;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.springframework.beans.factory.DisposableBean;
 
 import javax.sql.DataSource;
 
 @TestConfiguration
 @Profile("test")
-public class TestDatabaseConfig {
+public class TestDatabaseConfig implements DisposableBean {
     
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    private PostgreSQLContainer<?> postgres;
+
+    @SuppressWarnings("resource")
+    @Bean(initMethod = "start")
     public PostgreSQLContainer<?> postgreSQLContainer() {
-        return new PostgreSQLContainer<>("postgres:15-alpine")
+        postgres = new PostgreSQLContainer<>("postgres:15-alpine")
                 .withDatabaseName("testdb")
                 .withUsername("test")
                 .withPassword("test");
+        return postgres;
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        if (postgres != null) {
+            postgres.close();
+        }
     }
 
     @Bean

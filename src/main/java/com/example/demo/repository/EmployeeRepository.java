@@ -7,9 +7,13 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.BeanPropertySqlParameterSource;
+import java.sql.Timestamp;
+import java.time.Instant;
+
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 import java.util.Optional;
-import java.lang.reflect.Field;
 
 @Repository
 public class EmployeeRepository {
@@ -38,37 +42,31 @@ public class EmployeeRepository {
         return update(employee);
     }
 
-    private MapSqlParameterSource createParameterSource(Object object) {
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        try {
-            for (Field field : object.getClass().getDeclaredFields()) {
-                field.setAccessible(true);
-                String paramName = camelToSnakeCase(field.getName());
-                Object value = field.get(object);
-                params.addValue(paramName, value);
+    private SqlParameterSource createParameterSource(Employee employee) {
+        return new BeanPropertySqlParameterSource(employee) {
+            @Override
+            public Object getValue(String paramName) throws IllegalArgumentException {
+                Object value = super.getValue(paramName);
+                if (value instanceof Instant) {
+                    return Timestamp.from((Instant) value);
+                }
+                return value;
             }
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException("Error creating parameter source", e);
-        }
-        return params;
-    }
-
-    private String camelToSnakeCase(String str) {
-        return str.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+        };
     }
 
     private Employee insert(Employee employee) {
         String sql = "INSERT INTO employees (email, first_name, last_name, password_hash, role, manager_id, " +
-                "vacation_days_total, vacation_days_used) VALUES (:email, :first_name, :last_name, :password_hash, " +
-                ":role, :manager_id, :vacation_days_total, :vacation_days_used) RETURNING *";
+                "vacation_days_total, vacation_days_used) VALUES (:email, :firstName, :lastName, :passwordHash, " +
+                ":role, :managerId, :vacationDaysTotal, :vacationDaysUsed) RETURNING *";
         
         return jdbcTemplate.queryForObject(sql, createParameterSource(employee), rowMapper);
     }
 
     private Employee update(Employee employee) {
-        String sql = "UPDATE employees SET email = :email, first_name = :first_name, last_name = :last_name, " +
-                "role = :role, manager_id = :manager_id, vacation_days_total = :vacation_days_total, " +
-                "vacation_days_used = :vacation_days_used WHERE id = :id RETURNING *";
+        String sql = "UPDATE employees SET email = :email, first_name = :firstName, last_name = :lastName, " +
+                "role = :role, manager_id = :managerId, vacation_days_total = :vacationDaysTotal, " +
+                "vacation_days_used = :vacationDaysUsed WHERE id = :id RETURNING *";
 
         return jdbcTemplate.queryForObject(sql, createParameterSource(employee), rowMapper);
     }

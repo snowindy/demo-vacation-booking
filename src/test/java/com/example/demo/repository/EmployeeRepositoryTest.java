@@ -8,26 +8,44 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+
+import com.example.demo.config.TestDatabaseConfig;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest
-@ActiveProfiles("test")
+
+
+@SpringBootTest(classes = {
+    TestDatabaseConfig.class,
+    EmployeeRepository.class
+})
 @Testcontainers
+@ActiveProfiles("test")
 @Transactional
 class EmployeeRepositoryTest {
 
     @Autowired
     private EmployeeRepository employeeRepository;
 
+    @Autowired
+    private NamedParameterJdbcTemplate jdbcTemplate;
+
     private Employee testEmployee;
 
     @BeforeEach
     void setUp() {
+                List<Map<String, Object>> results = jdbcTemplate.queryForList(
+            "SELECT * FROM employees", 
+            Map.of()
+        );
+        System.out.println(results);
         testEmployee = Employee.builder()
                 .email("test@example.com")
                 .firstName("John")

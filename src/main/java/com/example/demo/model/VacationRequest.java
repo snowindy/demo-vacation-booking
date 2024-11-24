@@ -1,13 +1,25 @@
-package com.example.demo.dto;
+package com.example.demo.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.time.Instant;
 
 @Data
-public class VacationRequestDTO {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class VacationRequest {
+    public enum Status {
+        PENDING,
+        APPROVED,
+        REJECTED
+    }
+
     private Long id;
     private Long authorId;
-    private String status;
+    private Status status;
     private Long resolvedById;
     private Instant requestCreatedAt;
     private Instant vacationStartDate;

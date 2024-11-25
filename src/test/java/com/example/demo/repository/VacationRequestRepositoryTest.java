@@ -46,11 +46,6 @@ class VacationRequestRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        List<Map<String, Object>> results = jdbcTemplate.queryForList(
-            "SELECT * FROM employees", 
-            Map.of()
-        );
-        System.out.println(results);
         // Create test employee
         testEmployee = Employee.builder()
                 .email("employee@example.com")

@@ -2,7 +2,7 @@
 
 --changeset author:initial-schema-1 splitStatements:true
 --comment: Create enum type for request status
-CREATE TYPE request_status AS ENUM ('pending', 'approved', 'rejected');
+CREATE TYPE request_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 --changeset author:initial-schema-2 splitStatements:false
 --comment: Create function for updating timestamp on record modification
@@ -42,7 +42,7 @@ CREATE TRIGGER set_timestamp
 CREATE TABLE vacation_requests (
     id BIGSERIAL PRIMARY KEY,
     author_id BIGINT NOT NULL REFERENCES employees(id),
-    status request_status NOT NULL DEFAULT 'pending',
+    status request_status NOT NULL DEFAULT 'PENDING',
     resolved_by_id BIGINT REFERENCES employees(id),
     request_created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     vacation_start_date TIMESTAMP WITH TIME ZONE NOT NULL,

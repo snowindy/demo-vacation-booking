@@ -9,13 +9,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-import java.util.Map;
 
 import com.example.demo.config.TestDatabaseConfig;
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,9 +37,6 @@ class VacationRequestRepositoryTest {
     private Employee testEmployee;
     private Employee testManager;
     private VacationRequest testRequest;
-
-    @Autowired
-    private NamedParameterJdbcTemplate jdbcTemplate;
 
 
     @BeforeEach
@@ -123,7 +118,25 @@ class VacationRequestRepositoryTest {
     void shouldFindOverlappingRequests() {
         // Save initial request
         testRequest.setStatus(VacationRequest.Status.APPROVED);
-        vacationRequestRepository.save(testRequest);
+        testRequest = vacationRequestRepository.save(testRequest);
+
+        var testRequest1 = VacationRequest.builder()
+        .authorId(testEmployee.getId())
+        .status(VacationRequest.Status.REJECTED)
+        .requestCreatedAt(Instant.now())
+        .vacationStartDate(Instant.now().plus(10, ChronoUnit.DAYS))
+        .vacationEndDate(Instant.now().plus(15, ChronoUnit.DAYS))
+        .build();
+        vacationRequestRepository.save(testRequest1);
+
+        var testRequest2 = VacationRequest.builder()
+        .authorId(testEmployee.getId())
+        .status(VacationRequest.Status.REJECTED)
+        .requestCreatedAt(Instant.now())
+        .vacationStartDate(Instant.now().plus(20, ChronoUnit.DAYS))
+        .vacationEndDate(Instant.now().plus(25, ChronoUnit.DAYS))
+        .build();
+        vacationRequestRepository.save(testRequest2);
 
         // Check for overlapping period
         Instant startDate = testRequest.getVacationStartDate().minus(1, ChronoUnit.DAYS);
@@ -131,7 +144,6 @@ class VacationRequestRepositoryTest {
         
         List<VacationRequest> overlapping = vacationRequestRepository.findOverlapping(startDate, endDate);
         
-        assertFalse(overlapping.isEmpty());
         assertEquals(testRequest.getId(), overlapping.get(0).getId());
     }
 
@@ -139,11 +151,11 @@ class VacationRequestRepositoryTest {
     void shouldUpdateExistingRequest() {
         // Save initial request
         testRequest.setStatus(VacationRequest.Status.APPROVED);
-        vacationRequestRepository.save(testRequest);
+        testRequest = vacationRequestRepository.save(testRequest);
 
         // Update the request
         testRequest.setStatus(VacationRequest.Status.REJECTED);
-        vacationRequestRepository.save(testRequest);
+        testRequest = vacationRequestRepository.save(testRequest);
 
         // Check if the request is updated
         Optional<VacationRequest> updatedRequest = vacationRequestRepository.findById(testRequest.getId());

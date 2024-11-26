@@ -71,7 +71,7 @@ public class VacationRequestRepository {
 
     public List<VacationRequest> findOverlapping(Instant startDate, Instant endDate) {
         String sql = "SELECT * FROM vacation_requests " +
-                    "WHERE status = 'APPROVED'::request_status " +
+                    "WHERE status <> 'REJECTED'::request_status " +
                     "AND (vacation_start_date, vacation_end_date) OVERLAPS (:startDate, :endDate)";
         var params = new CustomMapSqlParameterSource()
             .addValue("startDate", startDate)
